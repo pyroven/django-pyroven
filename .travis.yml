@@ -1,9 +1,11 @@
 language: python
-python:
-  - "2.7"
 
-# command to install dependencies
-install: "pip install --use-mirrors -q -r requirements.txt"
+install:
+    - pip install tox
 
-# command to run tests
-script: python runtests.py
+script:
+    - tox
+
+env:
+    - TOXENV=django15
+    - TOXENV=django16
