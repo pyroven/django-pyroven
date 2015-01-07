@@ -199,7 +199,7 @@ class RavenResponse(object):
         
         # Check that it matches
         try:
-            verify(cert, self.sig, data, 'sha1')
+            verify(cert, self.sig, str(data), 'sha1')
         except Exception, e:
             raise InvalidResponseError("The signature for this "
                                         "response is not valid.")
