@@ -54,38 +54,40 @@ cbvAhow217X9V0dVerEOKxnNYspXRrh36h7k4mQA+sDq
 -----END RSA PRIVATE KEY-----
 """
 
+
 def create_wls_response(raven_ver='2', raven_status='200', raven_msg='',
-                        raven_issue=datetime.utcnow().strftime('%Y%m%dT%H%M%SZ'),
-                        raven_id='1347296083-8278-2', 
-                        raven_url='http%3A%2F%2Fwww.example.org%2Fraven_return%2F',
-                        raven_principal=RAVEN_TEST_USER, raven_auth='pwd', 
-                        raven_sso='', raven_life='36000', raven_params='', 
+                        raven_issue=datetime.utcnow().strftime('%Y%m%dT%H%M%SZ'),  # noqa
+                        raven_id='1347296083-8278-2',
+                        raven_url='http%3A%2F%2Fwww.example.org%2Fraven_return%2F',  # noqa
+                        raven_principal=RAVEN_TEST_USER, raven_auth='pwd',
+                        raven_sso='', raven_life='36000', raven_params='',
                         raven_kid='901',
                         raven_key_pem=GOOD_PRIV_KEY_PEM):
-    """Creates a valid WLS Response as the Raven test server would 
+    """Creates a valid WLS Response as the Raven test server would
     using keys from https://raven.cam.ac.uk/project/keys/demo_server/
     """
-    raven_pkey = load_privatekey(FILETYPE_PEM, raven_key_pem) 
+    raven_pkey = load_privatekey(FILETYPE_PEM, raven_key_pem)
     trans_table = maketrans("+/=", "-._")
 
     # This is the data which is signed by Raven with their private key
     # Note data consists of full payload with exception of kid and sig
     # source: http://raven.cam.ac.uk/project/waa2wls-protocol.txt
-    wls_response_data = [raven_ver, raven_status, raven_msg, 
-                         raven_issue, raven_id, raven_url, 
-                         raven_principal, raven_auth, raven_sso, 
+    wls_response_data = [raven_ver, raven_status, raven_msg,
+                         raven_issue, raven_id, raven_url,
+                         raven_principal, raven_auth, raven_sso,
                          raven_life, raven_params]
-    
+
     data = '!'.join(wls_response_data)
     raven_sig = b64encode(sign(raven_pkey, data, 'sha1'))
 
     # Full WLS-Response also includes the Raven-variant b64encoded sig
-    # and the requisite Key ID which has been used for the signing 
+    # and the requisite Key ID which has been used for the signing
     # process
     wls_response_data.append(raven_kid)
     wls_response_data.append(str(raven_sig).translate(trans_table))
 
     return '!'.join(wls_response_data)
+
 
 class RavenTestCase(TestCase):
     """RavenTestCase
@@ -100,24 +102,38 @@ class RavenTestCase(TestCase):
 
     def test_login_raven_not_local(self):
         """Tests login of user via raven, not in database"""
-        response = self.client.get(reverse('raven_return'), 
-                        {'WLS-Response': create_wls_response(
-                            raven_principal=RAVEN_NEW_USER)})
-        
+        self.client.get(
+            reverse('raven_return'),
+            {
+                'WLS-Response': create_wls_response(
+                    raven_principal=RAVEN_NEW_USER
+                ),
+            }
+        )
+
         self.assertNotIn('_auth_user_id', self.client.session)
 
     def test_login_raven_local(self):
         """Tests login of user who exists in database"""
-        response = self.client.get(reverse('raven_return'), 
-                        {'WLS-Response': create_wls_response()})
+        self.client.get(
+            reverse('raven_return'),
+            {
+                'WLS-Response': create_wls_response(),
+            }
+        )
 
         self.assertIn('_auth_user_id', self.client.session)
 
-    def test_login_invalid_version_fails(self): 
+    def test_login_invalid_version_fails(self):
         with self.assertRaises(MalformedResponseError) as excep:
-            response = self.client.get(reverse('raven_return'), 
-                                       {'WLS-Response': create_wls_response(
-                                        raven_ver='3')})
+            self.client.get(
+                reverse('raven_return'),
+                {
+                    'WLS-Response': create_wls_response(
+                        raven_ver='3'
+                    ),
+                }
+            )
 
         self.assertEqual(excep.exception.message,
                          'Version number does not match that in the '
@@ -127,25 +143,37 @@ class RavenTestCase(TestCase):
     def test_login_issue_future_fails(self):
         """Tests that Raven responses issued in the future fail validation"""
         with self.assertRaises(InvalidResponseError) as excep:
-            response = self.client.get(reverse('raven_return'), 
-                                       {'WLS-Response': create_wls_response(
-                                        raven_issue=(datetime.utcnow() + 
-                                        timedelta(hours=1))
-                                        .strftime('%Y%m%dT%H%M%SZ'))})
-        
-        self.assertEqual(excep.exception.message, 
+            raven_issue = datetime.utcnow() + timedelta(hours=1)
+            raven_issue = raven_issue.strftime('%Y%m%dT%H%M%SZ')
+
+            self.client.get(
+                reverse('raven_return'),
+                {
+                    'WLS-Response': create_wls_response(
+                        raven_issue=raven_issue
+                    ),
+                }
+            )
+
+        self.assertEqual(excep.exception.message,
                          'The timestamp on the response is in the future')
         self.assertNotIn('_auth_user_id', self.client.session)
 
     def test_login_issue_too_old_fails(self):
-        """Tests that Raven responses which are older than PYROVEN_TIMEOUT + 
+        """Tests that Raven responses which are older than PYROVEN_TIMEOUT +
         PYROVEN_MAX_CLOCK_SKEW are rejected"""
         with self.assertRaises(InvalidResponseError) as excep:
-            response = self.client.get(reverse('raven_return'), 
-                                       {'WLS-Response': create_wls_response(
-                                        raven_issue=(datetime.utcnow() + 
-                                        timedelta(hours=-1))
-                                        .strftime('%Y%m%dT%H%M%SZ'))})
+            raven_issue = datetime.utcnow() - timedelta(hours=1)
+            raven_issue = raven_issue.strftime('%Y%m%dT%H%M%SZ')
+
+            self.client.get(
+                reverse('raven_return'),
+                {
+                    'WLS-Response': create_wls_response(
+                        raven_issue=raven_issue
+                    ),
+                }
+            )
 
         self.assertEqual(excep.exception.message,
                          'The response has timed out')
@@ -154,23 +182,32 @@ class RavenTestCase(TestCase):
     def test_login_wrong_private_key_fails(self):
         """Tests that Raven responses with invalid key fail"""
         with self.assertRaises(InvalidResponseError) as excep:
-            response = self.client.get(reverse('raven_return'), 
-                                       {'WLS-Response': 
-                                        create_wls_response(
-                                        raven_key_pem=BAD_PRIV_KEY_PEM)})
-        
+            self.client.get(
+                reverse('raven_return'),
+                {
+                    'WLS-Response': create_wls_response(
+                        raven_key_pem=BAD_PRIV_KEY_PEM
+                    )
+                }
+            )
+
         self.assertEqual(excep.exception.message,
                          'The signature for this response is not valid.')
         self.assertNotIn('_auth_user_id', self.client.session)
 
     def test_create_raven_not_local_create_false(self):
-        """When valid raven user authenticates, and PYROVEN_CREATE_USER is 
+        """When valid raven user authenticates, and PYROVEN_CREATE_USER is
         false, user is not created in database"""
 
         with self.settings(PYROVEN_CREATE_USER=False):
-            response = self.client.get(reverse('raven_return'), 
-                        {'WLS-Response': create_wls_response(
-                           raven_principal=RAVEN_NEW_USER)})
+            self.client.get(
+                reverse('raven_return'),
+                {
+                    'WLS-Response': create_wls_response(
+                        raven_principal=RAVEN_NEW_USER
+                    ),
+                }
+            )
 
             with self.assertRaises(User.DoesNotExist):
                 User.objects.get(username=RAVEN_NEW_USER)
@@ -180,10 +217,15 @@ class RavenTestCase(TestCase):
         creates valid user in database"""
 
         with self.settings(PYROVEN_CREATE_USER=True):
-            response = self.client.get(reverse('raven_return'), 
-                        {'WLS-Response': create_wls_response(
-                            raven_principal=RAVEN_NEW_USER)})
+            self.client.get(
+                reverse('raven_return'),
+                {
+                    'WLS-Response': create_wls_response(
+                        raven_principal=RAVEN_NEW_USER
+                    )
+                }
+            )
 
             user = User.objects.get(username=RAVEN_NEW_USER)
-            
+
             self.assertFalse(user.has_usable_password())

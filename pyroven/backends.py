@@ -4,25 +4,26 @@
 Provides the backend for the Django Pyroven
 """
 
-import urllib
 import traceback
 
 from django.contrib.auth.models import User
 from django.http import HttpResponseRedirect
 
-from pyroven import (MalformedResponseError, InvalidResponseError, 
+from pyroven import (MalformedResponseError, InvalidResponseError,
                      RavenResponse, PublicKeyNotFoundError)
 
 from pyroven.utils import setting
+
 
 class HttpResponseSeeOther(HttpResponseRedirect):
     """An HttpResponse with a 303 status code, since django doesn't provide one
     by default.  A 303 is required by the the WAA2WLS specification."""
     status_code = 303
 
+
 class RavenAuthBackend(object):
     """An authentication backend for django that uses Raven.  To use, add
-    'pyroven.backends.RavenAuthBackend' to AUTHENTICATION_BACKENDS 
+    'pyroven.backends.RavenAuthBackend' to AUTHENTICATION_BACKENDS
     in your django settings.py."""
 
     def authenticate(self, response_str=None):
@@ -48,12 +49,12 @@ class RavenAuthBackend(object):
         except PublicKeyNotFoundError:
             print("Cannot find a public key for the server's response")
             return None
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
             return None
 
         username = response.principal
- 
+
         if username is None:
             return None
 
@@ -68,7 +69,7 @@ class RavenAuthBackend(object):
             print("Successfully authenticated as %s in Raven, but that user "
                   "does not exist in Django" % username)
 
-            if setting('PYROVEN_CREATE_USER', default=False) == True:
+            if setting('PYROVEN_CREATE_USER', default=False):
                 print("Creating user for %s" % username)
                 user = User(username=username)
                 user.set_unusable_password()
@@ -76,7 +77,7 @@ class RavenAuthBackend(object):
                 return user
             else:
                 print("User %s not created" % username)
-            
+
             return None
         else:
             print("%s successfully authenticated via Raven" % username)
