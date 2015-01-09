@@ -54,11 +54,15 @@ cbvAhow217X9V0dVerEOKxnNYspXRrh36h7k4mQA+sDq
 -----END RSA PRIVATE KEY-----
 """
 
+EXAMPLE_RAVEN_RETURN_URL = 'http%3A%2F%2Fwww.example.org%2Fraven_return%2F'
+
 
 def create_wls_response(raven_ver='2', raven_status='200', raven_msg='',
-                        raven_issue=datetime.utcnow().strftime('%Y%m%dT%H%M%SZ'),  # noqa
+                        raven_issue=datetime.utcnow().strftime(
+                            '%Y%m%dT%H%M%SZ'
+                        ),
                         raven_id='1347296083-8278-2',
-                        raven_url='http%3A%2F%2Fwww.example.org%2Fraven_return%2F',  # noqa
+                        raven_url=EXAMPLE_RAVEN_RETURN_URL,
                         raven_principal=RAVEN_TEST_USER, raven_auth='pwd',
                         raven_sso='', raven_life='36000', raven_params='',
                         raven_kid='901',
