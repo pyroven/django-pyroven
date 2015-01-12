@@ -16,7 +16,7 @@ setup(name='django-pyroven',
       maintainer_email='pyroven@doismellburning.co.uk',
       packages=['pyroven'],
       install_requires=[
-          'Django<1.7',
+          'Django',
           'pyOpenSSL',
       ],
       classifiers=[
