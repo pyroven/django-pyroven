@@ -1,3 +1,5 @@
+**Deprecated and superseded by https://gitlab.developers.cam.ac.uk/uis/devops/django/ucamwebauth**
+
 # Pyroven: Cambridge University Raven integration for Django
 
 [![Build Status](https://travis-ci.org/pyroven/django-pyroven.svg?branch=master)](https://travis-ci.org/pyroven/django-pyroven)
